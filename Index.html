@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>我的行事曆</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#007aff">
+<style>
+body{margin:0;font-family:-apple-system;background:#f2f2f7}
+.app{padding:20px;max-width:420px;margin:auto}
+h1{text-align:center;font-size:24px;margin-bottom:20px}
+label{display:block;font-size:18px;margin-top:12px}
+input,textarea,button{width:100%;font-size:18px;padding:12px;margin-top:6px;border-radius:12px;border:1px solid #ccc;box-sizing:border-box}
+textarea{height:80px;resize:none}
+button{background:#007aff;color:white;border:none;margin-top:16px}
+.item{background:white;border-radius:14px;padding:14px;margin-top:10px}
+.delete{background:#ff3b30;margin-top:10px}
+</style>
+</head>
+<body>
+<div class="app">
+<h1>📅 我的行事曆</h1>
+<label>日期</label>
+<input type="date" id="date">
+<label>時間</label>
+<input type="time" id="time">
+<label>行程</label>
+<textarea id="text"></textarea>
+<button onclick="addEvent()">新增行程</button>
+<div id="list"></div>
+</div>
+
+<script>
+const dateInput=document.getElementById("date")
+const timeInput=document.getElementById("time")
+const textInput=document.getElementById("text")
+const list=document.getElementById("list")
+dateInput.value=new Date().toISOString().split("T")[0]
+
+if("serviceWorker"in navigator){navigator.serviceWorker.register("sw.js")}
+if("Notification"in window){Notification.requestPermission()}
+
+function loadEvents(){
+list.innerHTML=""
+const events=JSON.parse(localStorage.getItem("events")||"[]")
+events.filter(e=>e.date===dateInput.value).sort((a,b)=>a.time.localeCompare(b.time)).forEach((e,i)=>{
+const div=document.createElement("div")
+div.className="item"
+div.innerHTML=`<b>${e.time}</b><br>${e.text}<button class=delete onclick=deleteEvent(${i})>刪除</button>`
+list.appendChild(div)
+})}
+function addEvent(){
+if(!dateInput.value||!timeInput.value||!textInput.value)return alert("請填寫完整")
+const events=JSON.parse(localStorage.getItem("events")||"[]")
+const t=new Date(`${dateInput.value}T${timeInput.value}`)
+events.push({date:dateInput.value,time:timeInput.value,text:textInput.value,timestamp:t.getTime()})
+localStorage.setItem("events",JSON.stringify(events))
+scheduleNotification(t,textInput.value)
+textInput.value=""
+loadEvents()}
+function deleteEvent(i){
+const events=JSON.parse(localStorage.getItem("events")||"[]")
+events.splice(i,1)
+localStorage.setItem("events",JSON.stringify(events))
+loadEvents()}
+function scheduleNotification(time,text){
+const delay=time.getTime()-Date.now()
+if(delay>0&&Notification.permission==="granted"){
+setTimeout(()=>new Notification("行事曆提醒",{body:text}),delay)
+}}
+dateInput.addEventListener("change",loadEvents)
+loadEvents()
+</script>
+</body>
+</html>
